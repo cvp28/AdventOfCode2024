@@ -9,6 +9,7 @@ public class Program
         Console.WriteLine(Day switch
         {
             1 => Day1.Solution(),
+            2 => Day2.Solution(),
 
             _ => string.Empty
         });
