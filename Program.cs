@@ -11,6 +11,7 @@ public class Program
             1 => Day1.Solution(),
             2 => Day2.Solution(),
             3 => Day3.Solution(),
+            4 => Day4.Solution(),
 
             _ => string.Empty
         });
