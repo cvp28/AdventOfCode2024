@@ -1,8 +1,18 @@
 ﻿
+using System.Diagnostics;
+
 public class Program
 {
     static void Main(string[] args)
     {
+        var start = Stopwatch.GetTimestamp();
+        var sol = Day6.Solution();
+        var time_taken = Stopwatch.GetElapsedTime(start);
+
+        Console.WriteLine($"Found solution '{sol}' in {time_taken.TotalMilliseconds}");
+
+        Console.WriteLine();
+
         if (args.Length == 0) return;
         if (!int.TryParse(args[0], out int Day)) return;
 
