@@ -2,12 +2,12 @@
 using System.Runtime.CompilerServices;
 
 using Position = (int X, int Y);
-using PosDir = ((int X, int Y) Pos, Direction Dir);
+//using PosDir = ((int X, int Y) Pos, Direction Dir);
 
 internal class Day6
 {
-	private static HashSet<Position> UniquePositionsVisited = [];
-	private static HashSet<PosDir> PosDirHashes = [];
+	private static HashSet<int> UniquePositionsVisited = [];
+	//private static HashSet<int> PosDirHashes = [];
 
 	private static int Height;
 	private static int Width;
@@ -15,6 +15,8 @@ internal class Day6
 	public static (int Part1, int Part2) Solution()
 	{
 		var Input = File.ReadAllText(@".\Days\6\input.txt");
+
+		Input.ReplaceLineEndings("\n");
 
 		int Part1 = 0;
 		int Part2 = 0;
@@ -24,8 +26,8 @@ internal class Day6
 
 		var Map = Input.ReplaceLineEndings(string.Empty).ToCharArray();
 
-		Position GuardStartPos = (0, 0);
-		Direction GuardStartDir = Direction.North;
+		Position StartPos = (0, 0);
+		Direction StartDir = Direction.North;
 
 		List<Position> BlankPositions = [];
 
@@ -34,7 +36,9 @@ internal class Day6
 			switch (Map[i])
 			{
 				case '^':
-					GuardStartPos = ToPos(i);
+					var Pos = ToPos(i);
+					StartPos.X = Pos.X;
+					StartPos.Y = Pos.Y;
 					break;
 
 				case '.':
@@ -43,24 +47,28 @@ internal class Day6
 			}
 
 		// Run sim once to compute Pt. 1
-		SimulatePatrol(Map, GuardStartPos, GuardStartDir, out Part1);
+		Part1 = SimulatePatrolPt1(Map, StartPos, StartDir);
 
 
 		// Run sim in a loop to compute Pt. 2
 
 		// Each loop iteration, we replace one of the blank positions with an obstacle and re-run the sim to determine if that will end up looping
 		// NOTE: This is not efficient in the slightest
-		for (int i = 0; i < BlankPositions.Count; i++)
+		Parallel.For(0, BlankPositions.Count, delegate (int i)
 		{
 			Position Pos = BlankPositions[i];
 
-			Map[ToIndex(in Pos)] = '#';
-
-			if (!SimulatePatrol(Map, GuardStartPos, GuardStartDir, out _))
+			if (!SimulatePatrolPt2(Map, StartPos, StartDir, ToIndex(Pos)))
 				Part2++;
+		});
 
-			Map[ToIndex(in Pos)] = '.';
-		}
+		//	for (int i = 0; i < BlankPositions.Count; i++)
+		//	{
+		//		Position Pos = BlankPositions[i];
+		//	
+		//		if (!SimulatePatrolPt2(Map, StartPos, StartDir, ToIndex(Pos)))
+		//			Part2++;
+		//	}
 
 		return (Part1, Part2);
 	}
@@ -74,12 +82,36 @@ internal class Day6
 		return (Pos.X, Pos.Y);
 	}
 
-	private static bool SimulatePatrol(char[] Map, Position Pos, Direction Dir, out int UniquePosCount)
+	private static int SimulatePatrolPt1(char[] Map, Position Pos, Direction Dir)
 	{
 		UniquePositionsVisited.Clear();
-		PosDirHashes.Clear();
+		UniquePositionsVisited.Add(ToIndex(Pos));
 
-		UniquePositionsVisited.Add(Pos);
+		while (IsInLab(in Pos))
+		{
+			switch (CheckCanMoveForwardPt1(Map, Pos, in Dir))
+			{
+				case CheckResult.Collides:
+					TurnRight(ref Dir);
+					break;
+
+				case CheckResult.Succeeds:
+					MoveForward(ref Pos, in Dir);
+					UniquePositionsVisited.Add(ToIndex(in Pos));
+					break;
+
+				case CheckResult.Exits:
+					goto end;
+			}
+		}
+
+	end:
+		return UniquePositionsVisited.Count;
+	}
+
+	private static bool SimulatePatrolPt2(char[] Map, Position Pos, Direction Dir, int ObstacleIndex)
+	{
+		HashSet<int> PosDirHashes = [];
 
 		while (IsInLab(in Pos))
 		{
@@ -90,14 +122,15 @@ internal class Day6
 			// A loop has happened if we ever end up in the same spot facing the same direction
 			// Which is to say, the current sim iteration's hash is already in the list
 
-			if (!PosDirHashes.Add((Pos, Dir)))
+			int Hash = HashCode.Combine(Pos, Dir);
+
+			if (!PosDirHashes.Add(Hash))
 			{
 				// If we end up here, then the guard has done a loop
-				UniquePosCount = UniquePositionsVisited.Count;
 				return false;
 			}
 
-			switch (CheckCanMoveForward(Map, in Pos, in Dir))
+			switch (CheckCanMoveForwardPt2(Map, Pos, in Dir, in ObstacleIndex))
 			{
 				case CheckResult.Collides:
 					TurnRight(ref Dir);
@@ -105,57 +138,14 @@ internal class Day6
 
 				case CheckResult.Succeeds:
 					MoveForward(ref Pos, in Dir);
-					UniquePositionsVisited.Add(Pos);
 					break;
 
 				case CheckResult.Exits:
 					goto end;
 			}
-
-			// Draw Map for debugging
-			Console.ReadKey(true);
-			Console.Clear();
-			for (int y = Pos.Y - 20; y < Pos.Y + 20; y++)
-			{
-				for (int x = Pos.X - 20; x < Pos.X + 20; x++)
-				{
-					if ((x, y) == Pos)
-					{
-						Console.ForegroundColor = ConsoleColor.Black;
-						Console.BackgroundColor = ConsoleColor.Red;
-						Console.Write(Dir switch
-						{
-							Direction.North => '^',
-							Direction.East => '>',
-							Direction.South => 'v',
-							Direction.West => '<',
-						});
-						Console.ResetColor();
-						continue;
-					}
-
-					char MapChar = Map[ToIndex((x, y))];
-			
-					switch (MapChar)
-					{
-						case '^':
-						case '.':
-							Console.Write(' ');
-							break;
-			
-						case '#':
-							Console.Write('#');
-							break;
-					}
-				}
-			
-			    Console.WriteLine();
-			}
-			Console.WriteLine(Pos);
 		}
 
 	end:
-		UniquePosCount = UniquePositionsVisited.Count;
 		return true;
 	}
 
@@ -165,15 +155,26 @@ internal class Day6
 		Pos.Y >= 0 &&
 		Pos.Y < Height;
 
-	private static CheckResult CheckCanMoveForward(char[] Map, in Position Pos, in Direction Dir)
+	private static CheckResult CheckCanMoveForwardPt1(char[] Map, Position Pos, in Direction Dir)
 	{
-		Position CheckPos = Pos;
-		MoveForward(ref CheckPos, in Dir);
+		MoveForward(ref Pos, in Dir);
 
-		if (!IsInLab(in CheckPos))
+		if (!IsInLab(in Pos))
 			return CheckResult.Exits;
 
-		return Map[ToIndex(in Pos)] != '#' ? CheckResult.Succeeds : CheckResult.Collides;
+		return Map[ToIndex(Pos)] != '#' ? CheckResult.Succeeds : CheckResult.Collides;
+	}
+
+	private static CheckResult CheckCanMoveForwardPt2(char[] Map, Position Pos, in Direction Dir, in int ObstacleIndex)
+	{
+		MoveForward(ref Pos, in Dir);
+
+		if (!IsInLab(in Pos))
+			return CheckResult.Exits;
+
+		int Index = ToIndex(Pos);
+
+		return Map[Index] != '#' && Index != ObstacleIndex ? CheckResult.Succeeds : CheckResult.Collides;
 	}
 
 	private static void MoveForward(ref Position Pos, in Direction Dir)
@@ -199,7 +200,35 @@ internal class Day6
 	}
 }
 
-enum Direction
+//	struct GuardState
+//	{
+//		public int State;
+//	
+//		public byte X
+//		{
+//			get => (byte) State;
+//			set => State = (byte) Dir << 16 | Y << 8 | value;
+//		}
+//	
+//	
+//		public byte Y
+//		{
+//			get => (byte) (State >> 8);
+//			set => State = (byte) Dir << 16 | value << 8 | X;
+//		}
+//	
+//		public Direction Dir
+//		{
+//			get => (Direction) (State >> 16);
+//			set => State = (byte) value << 16 | Y << 8 | X;
+//	
+//		}
+//	
+//		public int AsIndex(int Width) => (Y * Width) + X;
+//	
+//	}
+
+enum Direction : byte
 {
 	North,
 	East,
@@ -207,7 +236,7 @@ enum Direction
 	West
 }
 
-enum CheckResult
+enum CheckResult : byte
 {
 	Exits,						// Guard leaves the lab
 	Collides,					// Guard collides with an object '#'
