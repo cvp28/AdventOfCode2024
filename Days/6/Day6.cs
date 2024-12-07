@@ -36,13 +36,12 @@ internal class Day6
 			switch (Map[i])
 			{
 				case '^':
-					var Pos = ToPos(i);
-					StartPos.X = Pos.X;
-					StartPos.Y = Pos.Y;
+					StartPos.X = i % Width;
+					StartPos.Y = i / Width;
 					break;
 
 				case '.':
-					BlankPositions.Add(ToPos(i));
+					BlankPositions.Add((i % Width, i / Width));
 					break;
 			}
 
@@ -50,10 +49,7 @@ internal class Day6
 		Part1 = SimulatePatrolPt1(Map, StartPos, StartDir);
 
 
-		// Run sim in a loop to compute Pt. 2
-
-		// Each loop iteration, we replace one of the blank positions with an obstacle and re-run the sim to determine if that will end up looping
-		// NOTE: This is not efficient in the slightest
+		// Run sim in a parallel loop to compute Pt. 2
 		Parallel.For(0, BlankPositions.Count, delegate (int i)
 		{
 			Position Pos = BlankPositions[i];
@@ -62,25 +58,11 @@ internal class Day6
 				Part2++;
 		});
 
-		//	for (int i = 0; i < BlankPositions.Count; i++)
-		//	{
-		//		Position Pos = BlankPositions[i];
-		//	
-		//		if (!SimulatePatrolPt2(Map, StartPos, StartDir, ToIndex(Pos)))
-		//			Part2++;
-		//	}
-
 		return (Part1, Part2);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static int ToIndex(in Position Pos) => Pos.Y * Width + Pos.X;
-
-	private static Position ToPos(int Index)
-	{
-		(int Y, int X) Pos = Math.DivRem(Index, Width);
-		return (Pos.X, Pos.Y);
-	}
 
 	private static int SimulatePatrolPt1(char[] Map, Position Pos, Direction Dir)
 	{
@@ -126,7 +108,6 @@ internal class Day6
 
 			if (!PosDirHashes.Add(Hash))
 			{
-				// If we end up here, then the guard has done a loop
 				return false;
 			}
 
@@ -199,34 +180,6 @@ internal class Day6
 		};
 	}
 }
-
-//	struct GuardState
-//	{
-//		public int State;
-//	
-//		public byte X
-//		{
-//			get => (byte) State;
-//			set => State = (byte) Dir << 16 | Y << 8 | value;
-//		}
-//	
-//	
-//		public byte Y
-//		{
-//			get => (byte) (State >> 8);
-//			set => State = (byte) Dir << 16 | value << 8 | X;
-//		}
-//	
-//		public Direction Dir
-//		{
-//			get => (Direction) (State >> 16);
-//			set => State = (byte) value << 16 | Y << 8 | X;
-//	
-//		}
-//	
-//		public int AsIndex(int Width) => (Y * Width) + X;
-//	
-//	}
 
 enum Direction : byte
 {

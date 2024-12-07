@@ -3,6 +3,8 @@ public class Program
 {
     static void Main(string[] args)
     {
+        Day6.Solution();
+
         if (args.Length == 0) return;
         if (!int.TryParse(args[0], out int Day)) return;
 
