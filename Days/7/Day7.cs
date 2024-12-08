@@ -125,6 +125,7 @@ public struct Calibration
 		return Result;
 	}
 
+	// Some of this is taken from StackOverflow (https://stackoverflow.com/questions/2431732/checking-if-a-bit-is-set-or-not)
 	private char GetBit(int b, int pos) => ((b >> pos) & 1) != 0 ? '1' : '0';
 
 	private char GetBase3Bit(int Num, int Pos)
